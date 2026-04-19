@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3AM Thoughts — Enter The Void</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --black: #000000;
+            --void: #050510;
+            --lavender: #9B8EC4;
+            --lavender-glow: rgba(155,142,196,0.3);
+            --dim: #444;
+            --thought: #e8e4f0;
+            --fh: 'Lora', serif;
+            --fm: 'Space Mono', monospace;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        html,body{width:100%;height:100%;overflow:hidden;background:var(--black);color:#fff;font-family:var(--fm);}
+
+        canvas#stars{position:fixed;inset:0;z-index:0;}
+
+        .page{position:fixed;inset:0;display:none;flex-direction:column;z-index:10;overflow-y:auto;overflow-x:hidden;}
+        .page.active{display:flex;}
+
+        /* Moon toggle */
+        .moon-toggle{
+            position:fixed;top:20px;right:20px;z-index:500;width:40px;height:40px;
+            border-radius:50%;border:1px solid #333;background:transparent;color:#888;
+            font-size:1.2rem;cursor:pointer;transition:0.3s;display:flex;align-items:center;justify-content:center;
+        }
+        .moon-toggle:hover{border-color:var(--lavender);color:var(--lavender);}
+        .moon-toggle.on{background:var(--lavender-glow);border-color:var(--lavender);color:#fff;}
+
+        /* ===== PAGE 1 — HOOK ===== */
+        #p1{justify-content:center;align-items:center;text-align:center;padding:40px;}
+
+        .hook-thought{
+            font-family:var(--fh);font-style:italic;font-size:clamp(1.8rem,5vw,3.5rem);
+            color:var(--thought);opacity:0;transition:opacity 2s;max-width:700px;line-height:1.4;
+            text-shadow:0 0 30px rgba(155,142,196,0.15);
+        }
+        .hook-thought.visible{opacity:1;}
+
+        .hook-label{
+            font-family:var(--fm);font-size:0.85rem;letter-spacing:4px;text-transform:uppercase;
+            color:var(--dim);margin-top:40px;opacity:0;transition:opacity 2s;
+        }
+        .hook-label.visible{opacity:1;}
+
+        .void-btn{
+            font-family:var(--fm);font-size:0.9rem;letter-spacing:3px;text-transform:uppercase;
+            padding:16px 40px;background:transparent;color:var(--lavender);border:none;
+            cursor:pointer;transition:0.4s;opacity:0;margin-top:50px;
+            text-shadow:0 0 20px var(--lavender-glow);
+        }
+        .void-btn.visible{opacity:1;}
+        .void-btn:hover{color:#fff;text-shadow:0 0 40px var(--lavender),0 0 80px var(--lavender-glow);}
+
+        /* ===== PAGE 2 — GENERATOR ===== */
+        #p2{align-items:center;justify-content:center;padding:40px 20px;gap:30px;}
+
+        .clock{
+            font-family:var(--fm);font-size:clamp(1.5rem,4vw,2.5rem);color:#333;
+            letter-spacing:6px;text-align:center;
+        }
+        .clock-colon{animation:blink 1s step-end infinite;}
+        @keyframes blink{50%{opacity:0}}
+
+        .gen-btn{
+            padding:18px 50px;background:transparent;border:1px solid #222;color:var(--lavender);
+            font-family:var(--fm);font-size:0.85rem;letter-spacing:3px;text-transform:uppercase;
+            cursor:pointer;transition:0.4s;position:relative;overflow:hidden;
+        }
+        .gen-btn::before{
+            content:'';position:absolute;inset:-2px;border-radius:inherit;
+            background:linear-gradient(135deg,var(--lavender-glow),transparent,var(--lavender-glow));
+            opacity:0;transition:0.4s;z-index:-1;
+        }
+        .gen-btn:hover{border-color:var(--lavender);box-shadow:0 0 30px var(--lavender-glow);}
+        .gen-btn:hover::before{opacity:1;}
+
+        .thought-display{
+            max-width:700px;width:100%;min-height:120px;display:flex;align-items:center;justify-content:center;
+            text-align:center;position:relative;
+        }
+        .thought-text{
+            font-family:var(--fh);font-style:italic;font-size:clamp(1.5rem,4vw,2.8rem);
+            color:var(--thought);line-height:1.5;
+            text-shadow:0 0 40px rgba(155,142,196,0.2);
+        }
+        .thought-char{opacity:0;filter:blur(8px);transition:opacity 0.6s, filter 0.6s;}
+        .thought-char.show{opacity:1;filter:blur(0);}
+
+        .reactions{
+            display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+            opacity:0;transform:translateY(10px);transition:all 0.8s;
+        }
+        .reactions.visible{opacity:1;transform:translateY(0);}
+
+        .pill{
+            padding:10px 20px;background:rgba(255,255,255,0.03);border:1px solid #222;
+            border-radius:30px;font-size:0.85rem;cursor:pointer;transition:0.3s;color:#888;
+        }
+        .pill:hover{border-color:var(--lavender);color:var(--lavender);background:rgba(155,142,196,0.05);}
+        .pill.clicked{border-color:var(--lavender);color:#fff;background:rgba(155,142,196,0.15);}
+
+        .gen-again{
+            font-family:var(--fm);font-size:0.75rem;letter-spacing:2px;color:#333;
+            cursor:pointer;transition:0.3s;text-transform:uppercase;border:none;background:none;
+        }
+        .gen-again:hover{color:var(--lavender);}
+
+        /* Sparkle container */
+        .sparkle{position:fixed;pointer-events:none;z-index:100;width:6px;height:6px;background:var(--lavender);border-radius:50%;opacity:1;}
+
+        /* ===== PAGE 3 — COMMUNITY ===== */
+        #p3{align-items:center;padding:50px 20px;position:relative;}
+
+        .p3-title{font-family:var(--fm);font-size:0.7rem;letter-spacing:6px;text-transform:uppercase;color:#444;margin-bottom:10px;}
+        .p3-head{font-family:var(--fh);font-style:italic;font-size:2rem;color:var(--thought);margin-bottom:30px;text-align:center;}
+
+        .filter-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:30px;}
+        .filter-chip{
+            padding:8px 18px;border:1px solid #222;border-radius:20px;font-size:0.75rem;
+            color:#555;cursor:pointer;transition:0.3s;font-family:var(--fm);letter-spacing:1px;
+        }
+        .filter-chip:hover,.filter-chip.active{border-color:var(--lavender);color:var(--lavender);}
+
+        .drift-area{
+            position:relative;width:100%;max-width:900px;min-height:400px;overflow:hidden;
+        }
+        .drift-bubble{
+            position:absolute;font-family:var(--fh);font-style:italic;font-size:1.1rem;
+            color:rgba(232,228,240,0.7);padding:15px 25px;
+            background:rgba(155,142,196,0.04);border:1px solid rgba(155,142,196,0.08);
+            border-radius:20px;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;
+            animation:drift linear infinite;cursor:default;
+            text-shadow:0 0 15px rgba(155,142,196,0.1);
+        }
+        .drift-bubble:hover{color:#fff;border-color:rgba(155,142,196,0.3);background:rgba(155,142,196,0.08);}
+        @keyframes drift{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+
+        .submit-area{
+            margin-top:40px;width:100%;max-width:600px;display:flex;gap:10px;align-items:center;
+        }
+        .lantern-input{
+            flex:1;background:rgba(255,255,255,0.03);border:1px solid #222;border-radius:30px;
+            padding:14px 25px;font-family:var(--fh);font-style:italic;font-size:1.1rem;
+            color:var(--thought);outline:none;transition:0.3s;
+        }
+        .lantern-input:focus{border-color:var(--lavender);box-shadow:0 0 20px var(--lavender-glow);}
+        .lantern-input::placeholder{color:#333;}
+        .submit-orb{
+            width:48px;height:48px;border-radius:50%;background:rgba(155,142,196,0.1);
+            border:1px solid #333;display:flex;align-items:center;justify-content:center;
+            cursor:pointer;transition:0.3s;font-size:1.2rem;flex-shrink:0;
+        }
+        .submit-orb:hover{background:var(--lavender);border-color:var(--lavender);color:#000;}
+
+        /* ===== PAGE 4 — JOURNAL ===== */
+        #p4{align-items:center;padding:50px 20px;}
+
+        .notebook{
+            width:100%;max-width:600px;background:#0a0a12;border:1px solid #1a1a2a;
+            padding:40px;position:relative;min-height:400px;
+        }
+        .notebook::before{content:'';position:absolute;top:0;left:35px;bottom:0;width:1px;background:#1a1a2a;}
+        .nb-title{font-family:var(--fm);font-size:0.7rem;letter-spacing:5px;color:#333;text-transform:uppercase;margin-bottom:30px;padding-left:30px;}
+
+        .journal-entry{
+            padding:15px 15px 15px 45px;border-bottom:1px solid #111;
+            font-family:var(--fh);font-style:italic;font-size:1.15rem;color:rgba(232,228,240,0.6);
+            line-height:1.6;position:relative;
+        }
+        .journal-entry::before{
+            content:'•';position:absolute;left:28px;top:15px;color:var(--lavender);font-size:1.2rem;
+        }
+        .journal-time{font-family:var(--fm);font-size:0.65rem;color:#333;margin-top:5px;display:block;}
+
+        .empty-journal{
+            padding:40px;text-align:center;font-family:var(--fh);font-style:italic;
+            color:#222;font-size:1.2rem;
+        }
+
+        .dl-btn{
+            margin-top:30px;padding:14px 30px;background:transparent;border:1px solid #222;
+            color:#555;font-family:var(--fm);font-size:0.75rem;letter-spacing:3px;
+            text-transform:uppercase;cursor:pointer;transition:0.3s;
+        }
+        .dl-btn:hover{border-color:var(--lavender);color:var(--lavender);}
+
+        /* Nav strip */
+        .nav-strip{
+            position:fixed;bottom:0;left:0;right:0;z-index:100;
+            display:none;justify-content:center;gap:30px;padding:15px;
+            background:linear-gradient(transparent,rgba(0,0,0,0.9));
+        }
+        .nav-strip.show{display:flex;}
+        .nav-dot{
+            width:8px;height:8px;border-radius:50%;background:#222;cursor:pointer;transition:0.3s;
+        }
+        .nav-dot.active{background:var(--lavender);box-shadow:0 0 10px var(--lavender-glow);}
+        .nav-dot:hover{background:var(--lavender);}
+    </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+<button class="moon-toggle" id="moon-btn" title="Toggle lo-fi music">🌙</button>
+
+<!-- Nav -->
+<div class="nav-strip" id="nav-strip">
+    <div class="nav-dot active" onclick="goTo('p1')"></div>
+    <div class="nav-dot" onclick="goTo('p2')"></div>
+    <div class="nav-dot" onclick="goTo('p3')"></div>
+    <div class="nav-dot" onclick="goTo('p4')"></div>
+</div>
+
+<!-- P1 HOOK -->
+<div class="page active" id="p1">
+    <div class="hook-thought" id="h-thought"></div>
+    <div class="hook-label" id="h-label">Your brain at 3AM is something else.</div>
+    <button class="void-btn" id="btn-void">Enter The Void</button>
+</div>
+
+<!-- P2 GENERATOR -->
+<div class="page" id="p2">
+    <div class="clock" id="clock">3<span class="clock-colon">:</span>00<span class="clock-colon">:</span>00 AM</div>
+
+    <div class="thought-display" id="thought-box">
+        <div class="thought-text" id="thought-text"></div>
+    </div>
+
+    <button class="gen-btn" id="btn-gen">Generate a 3AM Thought</button>
+
+    <div class="reactions" id="reactions">
+        <div class="pill" data-r="fire">🔥 This is me</div>
+        <div class="pill" data-r="skull">💀 Too real</div>
+        <div class="pill" data-r="cry">😭 I needed this</div>
+        <div class="pill" data-r="think">🤔 Never thought of this</div>
+    </div>
+
+    <button class="gen-again" id="btn-again" style="opacity:0;">generate another →</button>
+</div>
+
+<!-- P3 COMMUNITY -->
+<div class="page" id="p3">
+    <div class="p3-title">Community</div>
+    <div class="p3-head">Thoughts from the sleepless.</div>
+
+    <div class="filter-row" id="filters">
+        <div class="filter-chip active" data-f="all">All</div>
+        <div class="filter-chip" data-f="existential">Existential</div>
+        <div class="filter-chip" data-f="weird">Weird Facts</div>
+        <div class="filter-chip" data-f="life">Life Realizations</div>
+        <div class="filter-chip" data-f="hypo">Hypotheticals</div>
+    </div>
+
+    <div class="drift-area" id="drift-area"></div>
+
+    <div class="submit-area">
+        <input class="lantern-input" id="user-thought" placeholder="Drop a 3AM thought into the void...">
+        <div class="submit-orb" id="btn-submit">✦</div>
+    </div>
+</div>
+
+<!-- P4 JOURNAL -->
+<div class="page" id="p4">
+    <div class="p3-title">Your Collection</div>
+    <div class="p3-head">Thoughts you saved tonight.</div>
+
+    <div class="notebook" id="notebook">
+        <div class="nb-title">3AM Journal</div>
+        <div id="journal-entries"></div>
+    </div>
+
+    <button class="dl-btn" id="btn-dl-journal">Download Journal</button>
+</div>
+
+<script>
+// ===== AUDIO ENGINE =====
+let aC, lofiPlaying=false, lofiNodes=[];
+function iA(){if(!aC){aC=new(window.AudioContext||window.webkitAudioContext)();}if(aC.state==='suspended')aC.resume();}
+
+function playTick(){
+    if(!aC)return;const t=aC.currentTime;
+    const o=aC.createOscillator(),g=aC.createGain();
+    o.type='sine';o.frequency.value=800;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.03,t+0.003);g.gain.linearRampToValueAtTime(0,t+0.03);
+    o.connect(g);g.connect(aC.destination);o.start(t);o.stop(t+0.03);
+}
+
+function playSparkle(){
+    if(!aC)return;const t=aC.currentTime;
+    [1200,1800,2400].forEach((f,i)=>{
+        const o=aC.createOscillator(),g=aC.createGain();
+        o.type='sine';o.frequency.value=f;
+        g.gain.setValueAtTime(0,t+i*0.05);g.gain.linearRampToValueAtTime(0.06,t+i*0.05+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,t+i*0.05+0.4);
+        o.connect(g);g.connect(aC.destination);o.start(t+i*0.05);o.stop(t+i*0.05+0.4);
+    });
+}
+
+// Lo-fi engine: layered sine drones + filtered noise
+function startLofi(){
+    if(!aC||lofiPlaying)return; lofiPlaying=true;
+    // Warm pad chord
+    const chordFreqs=[130.81,164.81,196.0,261.63];
+    chordFreqs.forEach(f=>{
+        const o=aC.createOscillator(),g=aC.createGain();
+        o.type='sine';o.frequency.value=f;
+        g.gain.value=0.02;
+        o.connect(g);g.connect(aC.destination);o.start();
+        lofiNodes.push(o,g);
+    });
+    // Gentle filtered noise hiss
+    const bufSize=aC.sampleRate*2,buf=aC.createBuffer(1,bufSize,aC.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++)data[i]=(Math.random()*2-1);
+    const noise=aC.createBufferSource();noise.buffer=buf;noise.loop=true;
+    const filt=aC.createBiquadFilter();filt.type='bandpass';filt.frequency.value=400;filt.Q.value=0.5;
+    const ng=aC.createGain();ng.gain.value=0.008;
+    noise.connect(filt);filt.connect(ng);ng.connect(aC.destination);noise.start();
+    lofiNodes.push(noise,filt,ng);
+}
+function stopLofi(){
+    lofiPlaying=false;
+    lofiNodes.forEach(n=>{try{if(n.stop)n.stop();n.disconnect();}catch(e){}});
+    lofiNodes=[];
+}
+
+document.getElementById('moon-btn').addEventListener('click',()=>{
+    iA();
+    const btn=document.getElementById('moon-btn');
+    if(lofiPlaying){stopLofi();btn.classList.remove('on');}
+    else{startLofi();btn.classList.add('on');}
+});
+
+// ===== STARS =====
+const cvs=document.getElementById('stars'),ctx=cvs.getContext('2d');
+let starList=[];
+function resize(){cvs.width=innerWidth;cvs.height=innerHeight;initStars();}
+addEventListener('resize',resize);
+function initStars(){
+    starList=[];
+    for(let i=0;i<200;i++){
+        starList.push({x:Math.random()*cvs.width,y:Math.random()*cvs.height,r:Math.random()*1.2,a:Math.random(),s:0.003+Math.random()*0.008});
+    }
+}
+resize();
+(function drawLoop(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    starList.forEach(s=>{
+        s.a+=s.s;if(s.a>1||s.a<0)s.s*=-1;
+        ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(200,195,230,${Math.abs(s.a)*0.8})`;ctx.fill();
+    });
+    requestAnimationFrame(drawLoop);
+})();
+
+// ===== NAV =====
+function goTo(id){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.nav-dot').forEach((d,i)=>{
+        d.classList.toggle('active',d===document.querySelectorAll('.nav-dot')['p1p2p3p4'.indexOf(id)/2]);
+    });
+    // Simple active state
+    const idx=['p1','p2','p3','p4'].indexOf(id);
+    document.querySelectorAll('.nav-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+    if(id==='p3')launchDrift();
+    if(id==='p4')renderJournal();
+}
+
+// ===== P1 HOOK =====
+const hookThoughts=["Do fish get thirsty?","What if I became a farmer?","Am I the only one awake right now?"];
+let hookIdx=0;
+function runHookSequence(){
+    const el=document.getElementById('h-thought');
+    function showNext(){
+        if(hookIdx>=hookThoughts.length){
+            document.getElementById('h-label').classList.add('visible');
+            setTimeout(()=>document.getElementById('btn-void').classList.add('visible'),1500);
+            return;
+        }
+        el.textContent=hookThoughts[hookIdx];
+        el.classList.add('visible');
+        setTimeout(()=>{
+            el.classList.remove('visible');
+            setTimeout(()=>{hookIdx++;showNext();},800);
+        },2500);
+    }
+    setTimeout(showNext,2000);// 2s silence
+}
+runHookSequence();
+
+document.getElementById('btn-void').addEventListener('click',()=>{
+    iA();document.getElementById('nav-strip').classList.add('show');goTo('p2');
+});
+
+// ===== P2 GENERATOR =====
+// Clock
+let sec=0;
+setInterval(()=>{
+    sec=(sec+1)%60;
+    const m=Math.floor(sec/60);
+    const s=sec%60;
+    document.getElementById('clock').innerHTML=`3<span class="clock-colon">:</span>${String(m).padStart(2,'0')}<span class="clock-colon">:</span>${String(s).padStart(2,'0')} AM`;
+    if(document.getElementById('p2').classList.contains('active'))playTick();
+},1000);
+
+const THOUGHTS={
+    existential:[
+        "If the universe is infinite, there's a version of you that already figured this out.",
+        "You'll never experience the way people describe you when you leave the room.",
+        "Every decision you didn't make created a life you'll never know about.",
+        "The voice in your head has been talking nonstop since you learned language.",
+        "One day someone thought about you for the last time and you had no idea.",
+        "You're the main character of your story but an NPC in everyone else's.",
+        "Your skeleton is always wet. You've never touched your own skeleton.",
+        "Everyone you pass on the highway is living a life as complex as yours."
+    ],
+    weird:[
+        "A group of flamingos is called a flamboyance. They knew what they were doing.",
+        "Pineapples take two years to grow. TWO YEARS. For one pineapple.",
+        "The voice you hear in your head is actually slower than the speed you read at.",
+        "Vending machines kill more people annually than sharks.",
+        "You can't hum while holding your nose. You just tried it.",
+        "A day on Venus is longer than a year on Venus.",
+        "Babies are born without kneecaps. They grow them later. Like DLC.",
+        "Honey never expires. You could eat 3000-year-old honey right now."
+    ],
+    life:[
+        "Being \"good at socializing\" is just being comfortable with being uncomfortable.",
+        "Your future self is watching you through memories right now.",
+        "Nobody is coming to save you, and that's actually the most freeing realization.",
+        "You spent your whole childhood wanting to be an adult and now you get it.",
+        "The hardest part of being disciplined is the moment right before you start.",
+        "Sometimes the version of you in someone else's head is the enemy.",
+        "Your comfort zone isn't comfortable. You're just used to it.",
+        "You don't hate Mondays. You hate that your life only feels real on weekends."
+    ],
+    hypo:[
+        "What if déjà vu is just a save point from a previous playthrough?",
+        "What if oxygen is actually toxic and just takes 80 years to kill you?",
+        "What if we've already met aliens but they just look like regular people?",
+        "What if every mirror is actually a window into a parallel universe?",
+        "What if the whole universe is just one atom in something much bigger?",
+        "What if plants are farming us by giving us oxygen until we decompose?",
+        "What if you woke up and this whole life was a dream of a 4-year-old?",
+        "What if dogs bring back the ball because they think you enjoy throwing it?"
+    ]
+};
+
+function getAllThoughts(){return Object.values(THOUGHTS).flat();}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+
+let currentThought='';
+document.getElementById('btn-gen').addEventListener('click',()=>{
+    iA();
+    const all=getAllThoughts();
+    currentThought=pick(all);
+    displayThought(currentThought);
+});
+
+function displayThought(text){
+    const el=document.getElementById('thought-text');
+    el.innerHTML='';
+    document.getElementById('reactions').classList.remove('visible');
+    document.getElementById('btn-again').style.opacity=0;
+
+    // Create chars
+    text.split('').forEach((c,i)=>{
+        const span=document.createElement('span');
+        span.className='thought-char';
+        span.textContent=c;
+        el.appendChild(span);
+        setTimeout(()=>span.classList.add('show'),i*35);
+    });
+
+    // Show reactions after text
+    setTimeout(()=>{
+        document.getElementById('reactions').classList.add('visible');
+        document.getElementById('btn-again').style.opacity=1;
+    },text.length*35+500);
+}
+
+// Reactions
+document.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click',function(){
+        iA();playSparkle();
+        document.querySelectorAll('.pill').forEach(x=>x.classList.remove('clicked'));
+        this.classList.add('clicked');
+        spawnSparkles(this);
+        // Save to journal
+        saveThought(currentThought,this.dataset.r);
+    });
+});
+
+function spawnSparkles(el){
+    const rect=el.getBoundingClientRect();
+    for(let i=0;i<12;i++){
+        const sp=document.createElement('div');
+        sp.className='sparkle';
+        sp.style.left=(rect.left+rect.width/2)+'px';
+        sp.style.top=(rect.top+rect.height/2)+'px';
+        const angle=Math.random()*Math.PI*2;
+        const dist=30+Math.random()*60;
+        const dx=Math.cos(angle)*dist,dy=Math.sin(angle)*dist;
+        document.body.appendChild(sp);
+        sp.animate([
+            {transform:'translate(0,0) scale(1)',opacity:1},
+            {transform:`translate(${dx}px,${dy}px) scale(0)`,opacity:0}
+        ],{duration:600+Math.random()*400,easing:'ease-out'});
+        setTimeout(()=>sp.remove(),1000);
+    }
+}
+
+document.getElementById('btn-again').addEventListener('click',()=>{
+    iA();const all=getAllThoughts();currentThought=pick(all);displayThought(currentThought);
+});
+
+// ===== P3 COMMUNITY =====
+const COMMUNITY=[
+    {t:"If you're the smartest person in the room, you're in the wrong room. But what if you're alone?",cat:"life"},
+    {t:"Somewhere in the world, it's someone's first time hearing their favorite song.",cat:"life"},
+    {t:"Do ants have rush hour?",cat:"weird"},
+    {t:"What if gravity just stopped for 5 seconds?",cat:"hypo"},
+    {t:"Every book you haven't read is a life you haven't lived.",cat:"existential"},
+    {t:"The word 'bed' looks like a bed.",cat:"weird"},
+    {t:"What if clouds are the ghosts of oceans?",cat:"hypo"},
+    {t:"You've already lived through your best day and didn't even know it.",cat:"existential"},
+    {t:"Someone's grandma holds the world record for something and doesn't know.",cat:"weird"},
+    {t:"What language do deaf people think in?",cat:"existential"},
+];
+
+let activeCat='all';
+function launchDrift(){
+    const area=document.getElementById('drift-area');
+    area.innerHTML='';
+    const filtered=activeCat==='all'?COMMUNITY:COMMUNITY.filter(c=>c.cat===activeCat);
+    filtered.forEach((item,i)=>{
+        const b=document.createElement('div');
+        b.className='drift-bubble';
+        b.textContent=item.t;
+        b.style.top=(10+Math.random()*70)+'%';
+        b.style.animationDuration=(20+Math.random()*25)+'s';
+        b.style.animationDelay=(i*-3)+'s';
+        area.appendChild(b);
+    });
+}
+
+document.querySelectorAll('.filter-chip').forEach(f=>{
+    f.addEventListener('click',function(){
+        document.querySelectorAll('.filter-chip').forEach(x=>x.classList.remove('active'));
+        this.classList.add('active');
+        activeCat=this.dataset.f;
+        launchDrift();
+    });
+});
+
+document.getElementById('btn-submit').addEventListener('click',()=>{
+    iA();playSparkle();
+    const inp=document.getElementById('user-thought');
+    const val=inp.value.trim();
+    if(!val)return;
+    COMMUNITY.unshift({t:val,cat:'life'});
+    inp.value='';
+    launchDrift();
+});
+
+// ===== P4 JOURNAL =====
+let journal=JSON.parse(localStorage.getItem('3am_journal')||'[]');
+function saveThought(t,reaction){
+    const entry={text:t,reaction:reaction,time:new Date().toLocaleTimeString()};
+    journal.push(entry);
+    localStorage.setItem('3am_journal',JSON.stringify(journal));
+}
+
+function renderJournal(){
+    const el=document.getElementById('journal-entries');
+    el.innerHTML='';
+    if(journal.length===0){
+        el.innerHTML='<div class="empty-journal">No thoughts saved yet. React to a thought to save it here.</div>';
+        return;
+    }
+    journal.forEach(e=>{
+        const div=document.createElement('div');
+        div.className='journal-entry';
+        const emoji={fire:'🔥',skull:'💀',cry:'😭',think:'🤔'}[e.reaction]||'✦';
+        div.innerHTML=`"${e.text}" <span style="color:var(--lavender)">${emoji}</span><span class="journal-time">${e.time}</span>`;
+        el.appendChild(div);
+    });
+}
+
+document.getElementById('btn-dl-journal').addEventListener('click',()=>{
+    if(journal.length===0)return;
+    let txt='═══ 3AM JOURNAL ═══\n\n';
+    journal.forEach((e,i)=>{
+        const emoji={fire:'🔥',skull:'💀',cry:'😭',think:'🤔'}[e.reaction]||'✦';
+        txt+=`${i+1}. "${e.text}" ${emoji}\n   — ${e.time}\n\n`;
+    });
+    txt+='\n— Generated by 3AM Thoughts · VishwaNova 2026';
+    const b=new Blob([txt],{type:'text/plain'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='3am_journal.txt';a.click();
+});
+</script>
+</body>
+</html>
